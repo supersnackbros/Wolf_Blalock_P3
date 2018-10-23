@@ -3,9 +3,13 @@
  * THIS YET
  *************************************************************************************************/
 
+#include <sys/types.h>
+#include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include "wrappers.h"
 
 /**************************************************************************************
  * These descriptions comply with my best understanding of what/how each is supposed to
@@ -59,42 +63,42 @@ void main(int argc, char *argv[]) {
         printf("Format: ./main num_tourists trips_per_tourist\n");
         exit(-1);
     }
-    int numTourists = argv[1];
-    tripsPerTourist = argv[2];
+    int numTourists = atoi(argv[1]);
+    tripsPerTourist = atoi(argv[2]);
 
-    sem_init(arrived, 0, 0);
-    sem_init(busLoaded, 0, 0);
-    sem_init(busUnloaded, 0, 0);
-    sem_init(seatbeltsFastened, 0, 0);
-    sem_init(songOver, 0, 0);
-    sem_init(availSeats, 0, 0);
-    sem_init(tweetMutex, 0, 1);
-    sem_init(countersMutex, 0, 1);
+    Sem_init(arrived, 0, 0);
+    Sem_init(busLoaded, 0, 0);
+    Sem_init(busUnloaded, 0, 0);
+    Sem_init(seatbeltsFastened, 0, 0);
+    Sem_init(songOver, 0, 0);
+    Sem_init(availSeats, 0, 0);
+    Sem_init(tweetMutex, 0, 1);
+    Sem_init(countersMutex, 0, 1);
 
     pthread_t indy;
-    pthread tourists[numTourists];
+    pthread_t tourists[numTourists];
     
-    pthread_create(&indy, NULL, Indiana, NULL);
+    Pthread_create(&indy, NULL, Indiana, NULL);
 
     for(int i = 0; i < numTourists; i++)
     {
-        pthread_create(&tourists[i], NULL, tourist, (void *) &i);
+        Pthread_create(&tourists[i], NULL, tourist, (void *) &i);
     }
 
     for(int i = 0; i < numTourists; i++)
     {
-        pthread_join(&tourists[i], NULL);
+        Pthread_join(tourists[i], NULL);
     }
-    pthread_join(&indy, NULL);
+    Pthread_join(indy, NULL);
 
-    sem_destroy(arrived);
-    sem_destroy(busLoaded);
-    sem_destroy(busUnloaded);
-    sem_destroy(seatbeltsFastened);
-    sem_destroy(songOver);
-    sem_destroy(availSeats);
-    sem_destroy(tweetMutex);
-    sem_destroy(countersMutex);
+    Sem_destroy(arrived);
+    Sem_destroy(busLoaded);
+    Sem_destroy(busUnloaded);
+    Sem_destroy(seatbeltsFastened);
+    Sem_destroy(songOver);
+    Sem_destroy(availSeats);
+    Sem_destroy(tweetMutex);
+    Sem_destroy(countersMutex);
 }
 
 void * tourist(void *arg) {
@@ -103,94 +107,101 @@ void * tourist(void *arg) {
     srandom(time(NULL));
 
     // Tweet "Tourist <j>: Arrived
-    sem_wait(tweetMutex);
+    W(tweetMutex);
     printf("Tourist <%d>: Arrived\n", j);
-    sem_post(tweetMutex);
+    V(tweetMutex);
 
     // Notify Indiana
-    sem_post(arrived);
+    V(arrived);
 
     // Increment "shopping"
-    sem_wait(countersMutex);
+    W(countersMutex);
     shopping++;
-    sem_post(countersMutex);
+    V(countersMutex);
 
     // Repeat "tripsPerTourist" times
     for (int i = 0; i < tripsPerTourist; i++) {
 
         // Tweet "Tourist <j>: Going to shop" 
-        sem_wait(tweetMutex);
+        W(tweetMutex);
         printf("Tourist <%d>: Going to shop\n", j);
-        sem_post(tweetMutex);
+        V(tweetMutex);
 
         // Simulate shopping session by sleeping
         shopTime = (random() % 2001) + 500;
         usleep(shopTime);
 
         // Wait for an available seat on the bus.
-        sem_wait(availSeats);
+        W(availSeats);
 
         // Update counters
-        sem_wait(countersMutex);
+        W(countersMutex);
         onBoard++;
         shopping--;
+        V(countersMutex);
 
         // Tweet "Tourist <j>: I got a seat on the bus"
-        sem_wait(tweetMutex);
+        W(tweetMutex);
         printf("Tourist <%d>: I got a seat on the bus\n", j);
-        sem_post(tweetMutex);
+        V(tweetMutex);
 
         // IF there are no more vacant seats OR NO other tourists are still shopping on the street
         if (onBoard == BUS_CAP || shopping == 0) {
 
             // Alert Driver that bus is "as-full-as-possible
-            sem_post(busLoaded);
+            V(busLoaded);
         }
-        sem_post(countersMutex);
+        V(countersMutex);
 
         // Fasten seatbelt and inform driver of that
-        sem_post(seatbeltsFastened);
+        V(seatbeltsFastened);
 
         // Wait for the bus to actually move
-        sem_wait(tourStarted);
+        W(tourStarted);
 
         // Tweet "Tourist <j>: wheels on the bus
-        sem_wait(tweetMutex);
+        W(tweetMutex);
         printf("Tourist <%d>: The Wheels on the Bus go Round and Round!\n", j);
-        sem_post(tweetMutex);
+        V(tweetMutex);
 
         // Inform Driver my song is over
-        sem_post(songOver);
+        V(songOver);
 
         // Wait for the tour to finish
-        sem_wait(tourFinished);
+        W(tourFinished);
 
         // Tweet "I got off the bus"
-        sem_wait(tweetMutex);
+        W(tweetMutex);
         printf("Tourist <%d>: I got off the bus\n", j);
-        sem_post(tweetMutex);
+        V(tweetMutex);
 
         // If I am the last tourist to get off the bus
-        sem_wait(countersMutex);
+        W(countersMutex);
         onBoard--;
         if (onBoard == 0) {
 
             // Tweet "The bus is now vacant"
-            sem_wait(tweetMutex);
+            W(tweetMutex);
             printf("Tourist <%d>: The bus is now vacant!\n", j);
 
             // Inform Driver that this group of tourists got off the bus
-            sem_post(busUnloaded);
+            V(busUnloaded);
         }
         shopping++;
-        sem_post(countersMutex);
+        V(countersMutex);
     }
     // Dercrement shopping (no longer in town)
-    sem_wait(countersMutex);
+    W(countersMutex);
     shopping--;
-    sem_post(countersMutex);
+    V(countersMutex);
 
     // Tweet "leaving town"
-    sem_wait(tweetMutex);
+    W(tweetMutex);
     printf("Tourist <%d>: Leaving Town\n", j);
+    V(tweetMutex);
+}
+
+void *Indiana(void* arg)
+{
+    
 }

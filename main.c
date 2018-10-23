@@ -37,9 +37,7 @@ sem_t *tweetMutex; // Mutex preventing multiple tourists from tweeting at once.
 
 sem_t *countersMutex; // Mutex preventing multiple tourists from adjusting counters at once.
 
-int tripsPerTourist; // Number of times tourists do a shopping-touring routine.
-
-int totalSeats; // Number of seats on the bus
+int tripsPerTourist; // Number  of times tourists do a shopping-touring routine.
 
 int onBoard; // Number of people on board the bus at any time
 
@@ -50,13 +48,57 @@ int shopping; // Number of tourists in town and shopping (not on the bus)
  ***************************************/
 int tickets; // Total tickets for today = numTourists x trips-per-tourist
 
+#define BUS_CAP 3
+
+void *tourist(void *arg);
+void *Indiana(void *arg);
+
 void main(int argc, char *argv[]) {
-    int numTourists;
+    if(argc != 3)
+    {
+        printf("Format: ./main num_tourists trips_per_tourist\n");
+        exit(-1);
+    }
+    int numTourists = argv[1];
+    tripsPerTourist = argv[2];
+
+    sem_init(arrived, 0, 0);
+    sem_init(busLoaded, 0, 0);
+    sem_init(busUnloaded, 0, 0);
+    sem_init(seatbeltsFastened, 0, 0);
+    sem_init(songOver, 0, 0);
+    sem_init(availSeats, 0, 0);
+    sem_init(tweetMutex, 0, 1);
+    sem_init(countersMutex, 0, 1);
+
+    pthread_t indy;
+    pthread tourists[numTourists];
     
+    pthread_create(&indy, NULL, Indiana, NULL);
+
+    for(int i = 0; i < numTourists; i++)
+    {
+        pthread_create(&tourists[i], NULL, tourist, (void *) &i);
+    }
+
+    for(int i = 0; i < numTourists; i++)
+    {
+        pthread_join(&tourists[i], NULL);
+    }
+    pthread_join(&indy, NULL);
+
+    sem_destroy(arrived);
+    sem_destroy(busLoaded);
+    sem_destroy(busUnloaded);
+    sem_destroy(seatbeltsFastened);
+    sem_destroy(songOver);
+    sem_destroy(availSeats);
+    sem_destroy(tweetMutex);
+    sem_destroy(countersMutex);
 }
 
 void * tourist(void *arg) {
-    int j = (int)arg;
+    int j = *(int *)arg;
     long shopTime;
     srandom(time(NULL));
 
@@ -99,7 +141,7 @@ void * tourist(void *arg) {
         sem_post(tweetMutex);
 
         // IF there are no more vacant seats OR NO other tourists are still shopping on the street
-        if (onBoard == totalSeats || shopping == 0) {
+        if (onBoard == BUS_CAP || shopping == 0) {
 
             // Alert Driver that bus is "as-full-as-possible
             sem_post(busLoaded);

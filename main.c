@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "wrappers.h"
 
 /**************************************************************************************
@@ -47,6 +48,8 @@ int onBoard; // Number of people on board the bus at any time
 
 int shopping; // Number of tourists in town and shopping (not on the bus)
 
+int numTourists;
+
 /***************************************
  * Why is this a global variable anyway?
  ***************************************/
@@ -63,7 +66,7 @@ void main(int argc, char *argv[]) {
         printf("Format: ./main num_tourists trips_per_tourist\n");
         exit(-1);
     }
-    int numTourists = atoi(argv[1]);
+    numTourists = atoi(argv[1]);
     tripsPerTourist = atoi(argv[2]);
 
     Sem_init(arrived, 0, 0);
@@ -128,7 +131,7 @@ void * tourist(void *arg) {
         V(tweetMutex);
 
         // Simulate shopping session by sleeping
-        shopTime = (random() % 2001) + 500;
+        shopTime = (random_r() % 2001) + 500;
         usleep(shopTime);
 
         // Wait for an available seat on the bus.
@@ -203,5 +206,88 @@ void * tourist(void *arg) {
 
 void *Indiana(void* arg)
 {
-    
+    // Tweet "Driver: Started My Day"
+    W(tweetMutex);
+    printf("Driver: Started My Day\n");
+    V(tweetMutex);
+
+    // Wait for all tourists to arrive to town
+    for(int i = 0; i < numTourists; i++)
+        W(arrived);
+
+    // Repeat indefinitely
+    while(1 == 1)
+    {
+        // If (all tourists left town)
+        if(shopping <= 0)
+            //break out of this loop
+            break;
+
+        // Declare all the seats on the bus now available
+        for(int i = 0; i < BUS_CAP; i++)
+            V(availSeats);
+
+        // Take a nap until the bus is "as-full-as-possible"
+        W(busLoaded);
+
+        // Tweet "Indy: Welcome on Board Everyone <count> !"
+        W(tweetMutex);
+        printf("Indy: Welcome on Board Everyone %d!\n", onBoard);
+        W(tweetMutex);
+
+        // Wait for all tourists on board to fasten their seatbelts
+        for(int i = 0; i < onBoard; i++)
+            W(seatbeltsFastened);
+
+        // Tweet "Indy: Thank you"
+        W(tweetMutex);
+        printf("Indy: Thanks you\n");
+        V(tweetMutex);
+
+        // duration = random: 1500 to 4000 mSec
+        long duration = (random_r() % 2501) + 1500;
+
+        // Tweet "Indy: Tour will last <duration> msec"
+        W(tweetMutex);
+        printf("Indy: Tour will last %ld msec\n", duration);
+        V(tweetMutex);
+
+        // Tweet "Indy: Bus is now moving. Sing Everyone!"
+        W(tweetMutex);
+        printf("Indy: Bus is now moving. Sing Everyone!\n");
+        V(tweetMutex);
+
+        // Tweet "Indy: Bus! Bus! On the street! Who is the fastest driver to beat?"
+        W(tweetMutex);
+        printf("Indy: Bus! Bus! On the street! Who is the fastest driver to beat?\n");
+        V(tweetMutex);
+
+        // Inform all tourists on board that bus has moved
+        for(int i = 0; i < onBoard; i++)
+            V(tourStarted);
+
+        // Sleep (duration)
+        usleep(duration);
+
+        // Wait for all tourists on board to finish their songs
+        for(int i = 0; i < onBoard; i++)
+            W(songOver);
+
+        // Tweet "Driver: Tour is over. Thanks you for Riding Indiana-Jones Coach"
+        W(tweetMutex);
+        printf("Driver: Tour is over. Thanks you for Riding Indiana-Jones Coach\n");
+        V(tweetMutex);
+
+        // Inform all tourists on board that tour has finished
+        for(int i = 0; i < onBoard; i++)
+            V(tourFinished);
+
+        // Wait for last tourist of this group of tourists to get off the bus
+        W(busUnloaded);
+    }
+
+    // Tweet "I did <count> tours today"
+    W(tweetMutex);
+    printf("I did %d tours today\n", (numTourists * tripsPerTourist));
+    V(tweetMutex);
 }

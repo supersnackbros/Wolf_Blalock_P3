@@ -85,7 +85,7 @@ void main(int argc, char *argv[]) {
 
     for(int i = 0; i < numTourists; i++)
     {
-        Pthread_create(&tourists[i], NULL, tourist, (void *) &i);
+        Pthread_create(&tourists[i], NULL, tourist, (void *) i);
     }
 
     for(int i = 0; i < numTourists; i++)
@@ -105,7 +105,7 @@ void main(int argc, char *argv[]) {
 }
 
 void * tourist(void *arg) {
-    int j = *(int *)arg;
+    int j = (int) arg;
     long shopTime;
     srandom(time(NULL));
 

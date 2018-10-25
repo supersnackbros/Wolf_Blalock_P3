@@ -3,7 +3,7 @@
 void unix_error(int code, char *msg)
 {
     fprintf(stderr, "%s: %s\n", msg, strerror(code));
-    exit(0);
+    _exit(0);
 }
 
 int Sem_init(sem_t *sem, int pshared, unsigned int value)

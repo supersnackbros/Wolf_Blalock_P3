@@ -64,7 +64,7 @@ void main(int argc, char *argv[]) {
     if(argc != 3)
     {
         printf("Format: ./main num_tourists trips_per_tourist\n");
-        exit(-1);
+        _exit(-1);
     }
     numTourists = atoi(argv[1]);
     tripsPerTourist = atoi(argv[2]);

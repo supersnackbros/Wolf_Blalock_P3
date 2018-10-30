@@ -90,7 +90,7 @@ void main(int argc, char *argv[]) {
 
     for(long i = 0; i < numTourists; i++)
     {
-        Pthread_create(&tourists[i], NULL, tourist, (void *) i);
+        Pthread_create(&tourists[i], NULL, tourist, (void *) (i+1));
     }
 
     for(int i = 0; i < numTourists; i++)
@@ -194,6 +194,7 @@ void * tourist(void *arg) {
             // Tweet "The bus is now vacant"
             W(&tweetMutex);
             printf("Tourist <%ld>: The bus is now vacant!\n", j);
+            V(&tweetMutex);
 
             // Inform Driver that this group of tourists got off the bus
             V(&busUnloaded);
@@ -242,7 +243,7 @@ void *Indiana(void* arg)
         // Tweet "Indy: Welcome on Board Everyone <count> !"
         W(&tweetMutex);
         printf("Indy: Welcome on Board Everyone %d!\n", onBoard);
-        W(&tweetMutex);
+        V(&tweetMutex);
 
         // Wait for all tourists on board to fasten their seatbelts
         for(int i = 0; i < onBoard; i++)
@@ -250,7 +251,7 @@ void *Indiana(void* arg)
 
         // Tweet "Indy: Thank you"
         W(&tweetMutex);
-        printf("Indy: Thanks you\n");
+        printf("Indy: Thank you\n");
         V(&tweetMutex);
 
         // duration = random: 1500 to 4000 mSec

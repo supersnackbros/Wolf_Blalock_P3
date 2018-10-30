@@ -75,6 +75,8 @@ void main(int argc, char *argv[]) {
     Sem_init(seatbeltsFastened, 0, 0);
     Sem_init(songOver, 0, 0);
     Sem_init(availSeats, 0, 0);
+    Sem_init(tourStarted, 0, 0);
+    Sem_init(tourFinished, 0, 0);
     Sem_init(tweetMutex, 0, 1);
     Sem_init(countersMutex, 0, 1);
 
@@ -149,6 +151,7 @@ void * tourist(void *arg) {
         V(tweetMutex);
 
         // IF there are no more vacant seats OR NO other tourists are still shopping on the street
+        W(countersMutex);
         if (onBoard == BUS_CAP || shopping == 0) {
 
             // Alert Driver that bus is "as-full-as-possible
@@ -217,7 +220,7 @@ void *Indiana(void* arg)
         W(arrived);
 
     // Repeat indefinitely
-    while(1 == 1)
+    while(true)
     {
         // If (all tourists left town)
         if(shopping <= 0)

@@ -83,7 +83,7 @@ void main(int argc, char *argv[]) {
     
     Pthread_create(&indy, NULL, Indiana, NULL);
 
-    for(int i = 0; i < numTourists; i++)
+    for(long i = 0; i < numTourists; i++)
     {
         Pthread_create(&tourists[i], NULL, tourist, (void *) i);
     }
@@ -105,13 +105,13 @@ void main(int argc, char *argv[]) {
 }
 
 void * tourist(void *arg) {
-    int j = (int) arg;
+    long j = (long) arg;
     long shopTime;
     srandom(time(NULL));
 
     // Tweet "Tourist <j>: Arrived
     W(tweetMutex);
-    printf("Tourist <%d>: Arrived\n", j);
+    printf("Tourist <%ld>: Arrived\n", j);
     V(tweetMutex);
 
     // Notify Indiana
@@ -127,11 +127,11 @@ void * tourist(void *arg) {
 
         // Tweet "Tourist <j>: Going to shop" 
         W(tweetMutex);
-        printf("Tourist <%d>: Going to shop\n", j);
+        printf("Tourist <%ld>: Going to shop\n", j);
         V(tweetMutex);
 
         // Simulate shopping session by sleeping
-        shopTime = (random_r() % 2001) + 500;
+        shopTime = (random() % 2001) + 500;
         usleep(shopTime);
 
         // Wait for an available seat on the bus.
@@ -145,7 +145,7 @@ void * tourist(void *arg) {
 
         // Tweet "Tourist <j>: I got a seat on the bus"
         W(tweetMutex);
-        printf("Tourist <%d>: I got a seat on the bus\n", j);
+        printf("Tourist <%ld>: I got a seat on the bus\n", j);
         V(tweetMutex);
 
         // IF there are no more vacant seats OR NO other tourists are still shopping on the street
@@ -164,7 +164,7 @@ void * tourist(void *arg) {
 
         // Tweet "Tourist <j>: wheels on the bus
         W(tweetMutex);
-        printf("Tourist <%d>: The Wheels on the Bus go Round and Round!\n", j);
+        printf("Tourist <%ld>: The Wheels on the Bus go Round and Round!\n", j);
         V(tweetMutex);
 
         // Inform Driver my song is over
@@ -175,7 +175,7 @@ void * tourist(void *arg) {
 
         // Tweet "I got off the bus"
         W(tweetMutex);
-        printf("Tourist <%d>: I got off the bus\n", j);
+        printf("Tourist <%ld>: I got off the bus\n", j);
         V(tweetMutex);
 
         // If I am the last tourist to get off the bus
@@ -185,7 +185,7 @@ void * tourist(void *arg) {
 
             // Tweet "The bus is now vacant"
             W(tweetMutex);
-            printf("Tourist <%d>: The bus is now vacant!\n", j);
+            printf("Tourist <%ld>: The bus is now vacant!\n", j);
 
             // Inform Driver that this group of tourists got off the bus
             V(busUnloaded);
@@ -200,12 +200,13 @@ void * tourist(void *arg) {
 
     // Tweet "leaving town"
     W(tweetMutex);
-    printf("Tourist <%d>: Leaving Town\n", j);
+    printf("Tourist <%ld>: Leaving Town\n", j);
     V(tweetMutex);
 }
 
 void *Indiana(void* arg)
 {
+    srandom(time(NULL));
     // Tweet "Driver: Started My Day"
     W(tweetMutex);
     printf("Driver: Started My Day\n");
@@ -245,7 +246,7 @@ void *Indiana(void* arg)
         V(tweetMutex);
 
         // duration = random: 1500 to 4000 mSec
-        long duration = (random_r() % 2501) + 1500;
+        long duration = (random() % 2501) + 1500;
 
         // Tweet "Indy: Tour will last <duration> msec"
         W(tweetMutex);

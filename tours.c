@@ -23,10 +23,10 @@ sem_t busLoaded; // Post when as full as possible. Indiana responds.
 sem_t busUnloaded; // Post when fully deboarded. Indiana responds.
 sem_t tweetMutex; // Mutex preventing multiple tourists from tweeting at once.
 sem_t countersMutex; // Mutex preventing multiple tourists from adjusting counters at once.
-int tripsPerTourist; // Number  of times tourists do a shopping-touring routine.
-int inTown; // Numer of people in town
+int tickets;
 int onBoard; // Number of people on board the bus at any time
 int shopping; // Number of tourists in town and shopping (not on the bus)
+int tripsPerTourist; // Number  of times tourists do a shopping-touring routine.
 int numTourists;
 
 #define BUS_CAP 3
@@ -46,6 +46,7 @@ void main(int argc, char *argv[]) {
     printf("OPERATOR We have %d tourists for today. Each will make %d tours\n", numTourists,
         tripsPerTourist);
 
+    tickets = numTourists * tripsPerTourist;
     onBoard = 0;
     shopping = 0;
 
@@ -95,9 +96,8 @@ void * tourist(void *arg) {
     long shopTime;
     srandom(time(NULL));
 
-    // Increment 'inTown' and 'shopping'
+    // Increment 'shopping'
     W(&countersMutex);
-    inTown++;
     shopping++;
     V(&countersMutex);
 
@@ -177,15 +177,13 @@ void * tourist(void *arg) {
             // Inform Driver that this group of tourists got off the bus
             V(&busUnloaded);
         }
-
-        // Change shopping and inTown depending on whether or not there is still shopping to be done
-        if (i + 1 < tripsPerTourist) // Still shopping to be done
-            shopping++;
-        else
-            inTown--; // No more shopping to do. Leave town.
-            
+        shopping++;
         V(&countersMutex);
     }
+
+    W(&countersMutex);
+    shopping--;
+    V(&countersMutex);
 
     // Tweet "leaving town"
     W(&tweetMutex);
@@ -195,6 +193,7 @@ void * tourist(void *arg) {
 
 void *Indiana(void* arg)
 {
+    int seatsToFree;
     int toursCompleted = 0;
 
     srandom(time(NULL));
@@ -209,23 +208,21 @@ void *Indiana(void* arg)
     }
 
     // Repeat indefinitely
-    while(1)
+    while(tickets > 0)
     {
-        // If (all tourists left town)
-        W(&countersMutex);
-        if(inTown <= 0) {
-            V(&countersMutex);
-            //break out of this loop
-            break;
-        }
-        V(&countersMutex);
-
-        // Declare all the seats on the bus now available
+        // Declare seats on the bus as available
         W(&tweetMutex);
         printf("\nIndy: New Tour. Declaring 3 vacant seats\n");
         V(&tweetMutex);
-        for(int i = 0; i < BUS_CAP; i++)
+        if (tickets >= BUS_CAP)
+            seatsToFree = BUS_CAP;
+        else
+            seatsToFree = tickets;
+
+        for(int i = 0; i < seatsToFree; i++) {
             V(&availSeats);
+            tickets--;
+        }
 
         // Take a nap until the bus is "as-full-as-possible"
         W(&tweetMutex);
